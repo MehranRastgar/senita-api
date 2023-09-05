@@ -1,0 +1,8 @@
+*.exe
+.exe
+*.exe~
+.exe~
+*.tar
+*.zip
+*.rar
+bin/*
