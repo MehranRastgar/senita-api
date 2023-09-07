@@ -84,12 +84,7 @@ func (uc *UserController) DeleteUser(ctx *fiber.Ctx) error {
 func (uc *UserController) ListUsers(ctx *fiber.Ctx) error {
 	var users []models.User
 	var skip, limit int
-	if skip == 0 {
-		skip = 0
-	}
-	if limit == 0 {
-		limit = 20
-	}
+
 	// Get the skip and limit values from the query string (if provided)
 	if skipParam := ctx.Query("skip"); skipParam != "" {
 		if parsedSkip, err := strconv.Atoi(skipParam); err == nil {
@@ -102,7 +97,12 @@ func (uc *UserController) ListUsers(ctx *fiber.Ctx) error {
 			limit = parsedLimit
 		}
 	}
-
+	if skip == 0 {
+		skip = 0
+	}
+	if limit == 0 {
+		limit = 20
+	}
 	// Build the query with skip and limit
 	query := uc.DB.Offset(skip).Limit(limit).Find(&users)
 

@@ -1,0 +1,17 @@
+version: '3'
+services:
+  redis:
+    image: redis
+    container_name: senita-redis-container
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    networks:
+      - redis-network
+
+volumes:
+  redis-data:
+
+networks:
+  redis-network:

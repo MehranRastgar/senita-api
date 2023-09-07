@@ -36,8 +36,9 @@ func main() {
 
 	//Start Redis on database 1 - it's used to store the JWT but you can use it for anythig else
 	//Example: db.GetRedis().Set(KEY, VALUE, at.Sub(now)).Err()
-	db.InitRedis(1)
-
+	if err := db.InitRedis(); err != nil {
+		panic(err)
+	}
 	fmt.Println("creating structure.")
 
 	fmt.Println("app running")

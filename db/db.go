@@ -1,13 +1,14 @@
 package db
 
 import (
+	"context"
 	"database/sql"
 	"fmt"
 	"os"
 	"senita-api/models"
 
 	"github.com/go-gorp/gorp"
-	_redis "github.com/go-redis/redis/v7"
+	"github.com/go-redis/redis/v8"
 	_ "github.com/lib/pq" //import postgres
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
@@ -28,9 +29,22 @@ var db *gorp.DbMap
 func Init() {
 	dbinfo := fmt.Sprintf("port=%s user=%s password=%s dbname=%s sslmode=disable", os.Getenv("DB_HOST"), os.Getenv("DB_USER"), os.Getenv("DB_PASS"), os.Getenv("DB_NAME"))
 
-	db, err := gorm.Open(postgres.Open(dbinfo), &gorm.Config{
-		CreateBatchSize: 1000,
-	})
+	db, err := gorm.Open(postgres.New(postgres.Config{
+		DSN:                  dbinfo,
+		PreferSimpleProtocol: true, // Use simple protocol for better performance
+	}), &gorm.Config{})
+
+	// db, err := gorm.Open(postgres.Open(dbinfo), &gorm.Config{
+
+	// 	CreateBatchSize: 1000,
+	// })
+	sqlDB, err := db.DB()
+	if err != nil {
+		// return nil, err
+	}
+
+	sqlDB.SetMaxIdleConns(10)  // Maximum number of idle connections
+	sqlDB.SetMaxOpenConns(100) // Maximum number of open connections
 	fmt.Println(err)
 	DB = db
 
@@ -59,18 +73,22 @@ func GetDB() *gorp.DbMap {
 }
 
 // RedisClient ...
-var RedisClient *_redis.Client
+var RedisClient *redis.Client
 
 // InitRedis ...
-func InitRedis(selectDB ...int) {
-
+func InitRedis(selectDB ...int) error {
 	var redisHost = os.Getenv("REDIS_HOST")
 	var redisPassword = os.Getenv("REDIS_PASSWORD")
 
-	RedisClient = _redis.NewClient(&_redis.Options{
+	db := 0 // Default DB value
+	if len(selectDB) > 0 {
+		db = selectDB[0]
+	}
+
+	RedisClient = redis.NewClient(&redis.Options{
 		Addr:     redisHost,
 		Password: redisPassword,
-		DB:       selectDB[0],
+		DB:       db,
 		// DialTimeout:        10 * time.Second,
 		// ReadTimeout:        30 * time.Second,
 		// WriteTimeout:       30 * time.Second,
@@ -79,23 +97,42 @@ func InitRedis(selectDB ...int) {
 		// IdleTimeout:        500 * time.Millisecond,
 		// IdleCheckFrequency: 500 * time.Millisecond,
 		// TLSConfig: &tls.Config{
-		// 	InsecureSkipVerify: true,
+		//     InsecureSkipVerify: true,
 		// },
 	})
 
+	// Test the connection to Redis by sending a PING command
+	pinged, err := RedisClient.Ping(context.Background()).Result()
+	if err != nil {
+		return err
+	}
+
+	// 	Ping the Redis server
+	fmt.Println(pinged)
+	return nil
 }
 
 // GetRedis ...
-func GetRedis() *_redis.Client {
-	return RedisClient
-}
 
 func AutoMigrate() {
 	dbinfo := fmt.Sprintf("port=%s user=%s password=%s dbname=%s sslmode=disable", os.Getenv("DB_HOST"), os.Getenv("DB_USER"), os.Getenv("DB_PASS"), os.Getenv("DB_NAME"))
 
-	db, err := gorm.Open(postgres.Open(dbinfo), &gorm.Config{
-		CreateBatchSize: 1000,
-	})
+	db, err := gorm.Open(postgres.New(postgres.Config{
+		DSN:                  dbinfo,
+		PreferSimpleProtocol: true, // Use simple protocol for better performance
+	}), &gorm.Config{})
+
+	// db, err := gorm.Open(postgres.Open(dbinfo), &gorm.Config{
+
+	// 	CreateBatchSize: 1000,
+	// })
+	sqlDB, err := db.DB()
+	if err != nil {
+		// return nil, err
+	}
+
+	sqlDB.SetMaxIdleConns(1000)  // Maximum number of idle connections
+	sqlDB.SetMaxOpenConns(10000) // Maximum number of open connections
 	fmt.Println(err)
 	DB = db
 
