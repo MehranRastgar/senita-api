@@ -1,94 +1,126 @@
 package Controllers
 
 import (
-	"log"
-	"senita-api/db"
-	models "senita-api/models"
+	"senita-api/models"
 	"strconv"
-	"time"
 
 	"github.com/gofiber/fiber/v2"
+	"gorm.io/gorm"
 )
 
-func CreateUser(c *fiber.Ctx) error {
-	var data map[string]string
+// UserController is the controller for managing users.
+type UserController struct {
+	DB *gorm.DB
+}
 
-	err := c.BodyParser(&data)
-	if err != nil {
-		log.Fatalf("registeration error in post request %v", err)
+// NewUserController creates a new instance of UserController.
+func NewUserController(database *gorm.DB) *UserController {
+	return &UserController{DB: database}
+}
+
+// CreateUser creates a new user.
+func (uc *UserController) CreateUser(ctx *fiber.Ctx) error {
+	user := new(models.User)
+	if err := ctx.BodyParser(user); err != nil {
+		return ctx.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": err.Error()})
 	}
 
-	if data["user_name"] == "" || data["password"] == "" {
-		return c.Status(400).JSON(fiber.Map{
-			"success": false,
-			"message": "user user_name and password is required",
-			"error":   map[string]interface{}{},
-		})
-	}
-	//passCode := strconv.Itoa(rand.Intn(1000000))
-	//fmt.Println("passCode:::", passCode
-
-	user := models.User{
-		UserName:  data["user_name"],
-		Password:  data["password"],
-		Email:     data["email"],
-		CreatedAt: time.Time{},
-		UpdatedAt: time.Time{},
+	if err := uc.DB.Create(user).Error; err != nil {
+		return ctx.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
 	}
 
-	db.DB.Create(&user)
-
-	return c.Status(200).JSON(fiber.Map{
-		"success": true,
-		"data":    data,
-	})
-
+	return ctx.JSON(user)
 }
 
-func EditUser(c *fiber.Ctx) error {
-	return nil
+// GetUser retrieves a user by ID.
+func (uc *UserController) GetUser(ctx *fiber.Ctx) error {
+	id := ctx.Params("id")
+	var user models.User
 
-}
-
-func UpdateUser(c *fiber.Ctx) error {
-	return nil
-
-}
-
-// Cashiers struct with two values
-type Users struct {
-	Id       uint   `json:"cashierId"`
-	UserName string `json:"user_name"`
-}
-
-func UserList(c *fiber.Ctx) error {
-	limit, _ := strconv.Atoi(c.Query("limit"))
-	skip, _ := strconv.Atoi(c.Query("skip"))
-	var count int64
-	var user []Users
-	db.DB.Select("*").Limit(limit).Offset(skip).Find(&user).Count(&count)
-	metaMap := map[string]interface{}{
-		"total": count,
-		"limit": limit,
-		"skip":  skip,
-	}
-	usersData := map[string]interface{}{
-		"users": user,
-		"meta":  metaMap,
+	if err := uc.DB.First(&user, id).Error; err != nil {
+		return ctx.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "User not found"})
 	}
 
-	return c.Status(200).JSON(fiber.Map{
-		"success": true,
-		"Message": "Success",
-		"data":    usersData,
-	})
-
+	return ctx.JSON(user)
 }
-func UserDetails(c *fiber.Ctx) error {
-	return nil
 
+// UpdateUser updates an existing user by ID.
+func (uc *UserController) UpdateUser(ctx *fiber.Ctx) error {
+	id := ctx.Params("id")
+	var user models.User
+
+	if err := uc.DB.First(&user, id).Error; err != nil {
+		return ctx.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "User not found"})
+	}
+
+	if err := ctx.BodyParser(&user); err != nil {
+		return ctx.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": err.Error()})
+	}
+
+	if err := uc.DB.Save(&user).Error; err != nil {
+		return ctx.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
+	}
+
+	return ctx.JSON(user)
 }
-func DeleteUser(c *fiber.Ctx) error {
-	return nil
 
+// DeleteUser deletes a user by ID.
+func (uc *UserController) DeleteUser(ctx *fiber.Ctx) error {
+	id := ctx.Params("id")
+	var user models.User
+
+	if err := uc.DB.First(&user, id).Error; err != nil {
+		return ctx.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "User not found"})
+	}
+
+	if err := uc.DB.Delete(&user).Error; err != nil {
+		return ctx.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
+	}
+
+	return ctx.SendStatus(fiber.StatusNoContent)
+}
+
+// ListUsers retrieves a list of users.
+func (uc *UserController) ListUsers(ctx *fiber.Ctx) error {
+	var users []models.User
+	var skip, limit int
+	if skip == 0 {
+		skip = 0
+	}
+	if limit == 0 {
+		limit = 20
+	}
+	// Get the skip and limit values from the query string (if provided)
+	if skipParam := ctx.Query("skip"); skipParam != "" {
+		if parsedSkip, err := strconv.Atoi(skipParam); err == nil {
+			skip = parsedSkip
+		}
+	}
+
+	if limitParam := ctx.Query("limit"); limitParam != "" {
+		if parsedLimit, err := strconv.Atoi(limitParam); err == nil {
+			limit = parsedLimit
+		}
+	}
+
+	// Build the query with skip and limit
+	query := uc.DB.Offset(skip).Limit(limit).Find(&users)
+
+	if query.Error != nil {
+		return ctx.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": query.Error.Error()})
+	}
+
+	return ctx.JSON(users)
+}
+
+// RegisterRoutes registers the user routes.
+func (uc *UserController) RegisterRoutes(app *fiber.App) {
+	api := app.Group("/api")
+	users := api.Group("/users")
+
+	users.Post("/", uc.CreateUser)
+	users.Get("/:id", uc.GetUser)
+	users.Put("/:id", uc.UpdateUser)
+	users.Delete("/:id", uc.DeleteUser)
+	users.Get("/", uc.ListUsers)
 }

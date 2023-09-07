@@ -16,7 +16,7 @@ type Article struct {
 	Content    string     `json:"content" gorm:"not null"`
 	AuthorID   int64      `json:"author_id" gorm:"not null"`
 	Author     User       `json:"author" gorm:"foreignKey:AuthorID"`
-	CategoryID int64      `json:"category_id" `
+	CategoryID *int64     `json:"category_id"`
 	Category   Category   `json:"category" gorm:"foreignKey:CategoryID"`
 }
 

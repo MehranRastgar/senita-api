@@ -23,7 +23,7 @@ type User struct {
 	DeletedAt *time.Time `json:"deleted_at" gorm:"index"`
 	Email     string     `json:"email" gorm:"unique;not null;index:idx_user_email"`
 	Password  string     `json:"password"`
-	UserName  string     `json:"user_name"`
+	UserName  string     `json:"user_name" gorm:"index:idx_name,unique"`
 	Role      UserRole   `json:"role"`
 	VendorId  int64      `json:"vendor_id"`
 }

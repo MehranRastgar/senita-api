@@ -65,17 +65,18 @@ func main() {
 			"success": false,
 			"message": "Token not true",
 		})
-
 	})
 	// Create a new app instance
 	db := db.DB // Initialize your GORM database connection
 
 	articleController := Controllers.NewArticleController(db)
 	categoryController := Controllers.NewCategoryController(db)
+	userController := Controllers.NewUserController(db)
 
 	Routes.Setup(app)
 	articleController.RegisterRoutes(app)
 	categoryController.RegisterRoutes(app)
+	userController.RegisterRoutes(app)
 
 	app.Listen(":" + os.Getenv("PORT"))
 
