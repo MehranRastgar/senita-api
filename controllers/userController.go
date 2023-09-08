@@ -124,7 +124,8 @@ func (uc *UserController) RegisterRoutes(app *fiber.App) {
 	users.Put("/:id", uc.UpdateUser)
 
 	// These routes require authentication
-	users.Use(Middleware.AuthMiddleware())
+
+	users.Use(Middleware.ValidateToken())
 
 	users.Delete("/:id", uc.DeleteUser)
 	users.Get("/", uc.ListUsers)

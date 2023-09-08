@@ -2,6 +2,7 @@ package Controllers
 
 import (
 	"fmt"
+	"os"
 	"senita-api/db"
 	"senita-api/models"
 	"senita-api/pkg/utils"
@@ -56,7 +57,7 @@ func (ac *AuthController) Login(ctx *fiber.Ctx) error {
 	claims["exp"] = time.Now().Add(time.Hour * 24).Unix() // Token expiration time (e.g., 24 hours)
 
 	// Sign the token with the secret key
-	tokenString, err := token.SignedString([]byte(ac.SecretKey))
+	tokenString, err := token.SignedString([]byte(os.Getenv("JWT_SECRET")))
 	if err != nil {
 		return ctx.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Failed to generate token"})
 	}
