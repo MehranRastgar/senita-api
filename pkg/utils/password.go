@@ -15,3 +15,9 @@ func HashAndSalt(pass []byte) string {
 
 	return string(hashed)
 }
+
+// TestPassword checks if the provided password matches the hashed password.
+func TestPassword(password []byte, hashedPassword string) bool {
+	err := bcrypt.CompareHashAndPassword([]byte(hashedPassword), password)
+	return err == nil
+}

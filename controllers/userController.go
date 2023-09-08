@@ -1,6 +1,7 @@
 package Controllers
 
 import (
+	Middleware "senita-api/middlewares"
 	"senita-api/models"
 	"strconv"
 
@@ -121,6 +122,10 @@ func (uc *UserController) RegisterRoutes(app *fiber.App) {
 	users.Post("/", uc.CreateUser)
 	users.Get("/:id", uc.GetUser)
 	users.Put("/:id", uc.UpdateUser)
+
+	// These routes require authentication
+	users.Use(Middleware.AuthMiddleware())
+
 	users.Delete("/:id", uc.DeleteUser)
 	users.Get("/", uc.ListUsers)
 }

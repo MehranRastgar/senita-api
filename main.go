@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"log"
 	"os"
-	Controllers "senita-api/controllers"
 	"senita-api/db"
 
 	Routes "senita-api/routes"
@@ -68,17 +67,7 @@ func main() {
 		})
 	})
 	// Create a new app instance
-	db := db.DB // Initialize your GORM database connection
-
-	articleController := Controllers.NewArticleController(db)
-	categoryController := Controllers.NewCategoryController(db)
-	userController := Controllers.NewUserController(db)
-
 	Routes.Setup(app)
-	articleController.RegisterRoutes(app)
-	categoryController.RegisterRoutes(app)
-	userController.RegisterRoutes(app)
 
 	app.Listen(":" + os.Getenv("PORT"))
-
 }
